@@ -34,11 +34,10 @@ public:
 private:
     void readData(std::ifstream &sourceFile)
     {
-        constexpr std::size_t bufferSize{1024 * 1024};
-        auto localBuffer = std::vector<char>(bufferSize);
+        auto localBuffer = std::vector<char>(_bufferSize);
         while (!sourceFile.eof())
         {
-            sourceFile.read(localBuffer.data(), bufferSize);
+            sourceFile.read(localBuffer.data(), _bufferSize);
             localBuffer.resize(sourceFile.gcount());
             std::unique_lock<std::mutex> lock(_mutex);
             _conditionalVariable.wait(lock, [this]()
@@ -75,6 +74,7 @@ private:
     }
 
     std::vector<char> _buffer;
+    constexpr static std::size_t _bufferSize{1024 * 1024};
     bool _readingFinished = false;
     std::condition_variable _conditionalVariable;
     std::mutex _mutex;
