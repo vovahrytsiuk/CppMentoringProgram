@@ -4,6 +4,8 @@ find_package(Boost REQUIRED COMPONENTS program_options)
 
 set(SOURCES
     main.cpp
+    ProgramOptions.cpp
+    ProgramOptions.h
 )
 
 # W4 or Werror Wall TODO
