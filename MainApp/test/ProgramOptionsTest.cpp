@@ -3,6 +3,8 @@
 
 #include "MainApp/ProgramOptions.h"
 
+using namespace std::literals;
+
 namespace
 {
     struct TestParams
@@ -16,7 +18,12 @@ namespace
     {
     };
 
-    constexpr auto HelpScreen = "Usage: copyTool --source \"source path\" --destination \"destination path\"";
+    constexpr auto HelpScreen = "Usage: copyTool --source \"source path\" --destination \"destination path\""sv;
+    constexpr auto HelpOption = "--help"sv;
+    constexpr auto SourceOption = "--source"sv;
+    constexpr auto DestinationOption = "--destination"sv;
+    constexpr auto SourceFilePath = "source.txt"sv;
+    constexpr auto DestinationFilePath = "dest.txt"sv;
 }
 
 bool operator==(const ProgramOptions &lhs, const ProgramOptions &rhs)
@@ -27,17 +34,17 @@ bool operator==(const ProgramOptions &lhs, const ProgramOptions &rhs)
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(ProgramOptionsTestSuite, ProgramOptionsTestFixture, ::testing::Values(
     TestParams{{}, std::nullopt, "the option '--destination' is required but missing"},
-    TestParams{{"--destination"}, std::nullopt, "the required argument for option '--destination' is missing"},
-    TestParams{{"--source"}, std::nullopt, "the required argument for option '--source' is missing"},
-    TestParams{{"--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--destination", "--source"}, std::nullopt, "the option '--source' is required but missing"},
-    TestParams{{"--source", "--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--destination", "--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--destination", "--source", "--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--source", "source.txt"}, std::nullopt, "the option '--destination' is required but missing"},
-    TestParams{{"--source", "source.txt", "--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--source", "source.txt", "--destination", "dest.txt", "--help"}, std::nullopt, HelpScreen},
-    TestParams{{"--source", "source.txt", "--destination", "dest.txt"}, ProgramOptions{"source.txt", "dest.txt"}, ""}
+    TestParams{{DestinationOption.data()}, std::nullopt, "the required argument for option '--destination' is missing"},
+    TestParams{{SourceOption.data()}, std::nullopt, "the required argument for option '--source' is missing"},
+    TestParams{{HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{DestinationOption.data(), SourceOption.data()}, std::nullopt, "the option '--source' is required but missing"},
+    TestParams{{SourceOption.data(), HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{DestinationOption.data(), HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{DestinationOption.data(), SourceOption.data(), HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{SourceOption.data(), SourceFilePath.data()}, std::nullopt, "the option '--destination' is required but missing"},
+    TestParams{{SourceOption.data(), SourceFilePath.data(), HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{SourceOption.data(), SourceFilePath.data(), DestinationOption.data(), DestinationFilePath.data(), HelpOption.data()}, std::nullopt, HelpScreen.data()},
+    TestParams{{SourceOption.data(), SourceFilePath.data(), DestinationOption.data(), DestinationFilePath.data()}, ProgramOptions{SourceFilePath, DestinationFilePath}, ""}
 ));
 // clang-format on
 
