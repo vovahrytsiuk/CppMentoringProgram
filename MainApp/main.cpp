@@ -1,20 +1,17 @@
-#include <stdio.h>
+#include <MainApp/ProgramOptions.h>
 #include <CopyTool/ICopyTool.h>
 #include <string>
 #include <iostream>
 
 int main(int argc, char **argv)
 {
-    if (argc != 3)
+    std::vector<std::string> args(argv + 1, argv + argc);
+    auto programOptions = ProgramOptions::ParseProgramOptions(args);
+    if (programOptions)
     {
-        std::cout << "Usage: program <sourcefile> <destinationfile>\n";
-        return 1;
+        auto copyTool = CreateTwoThreadedCopyTool(100 * 1024);
+        std::filesystem::remove(programOptions->_destination);
+        copyTool->CopyFile(programOptions->_source, programOptions->_destination);
     }
-
-    auto copyTool = CreateTwoThreadedCopyTool();
-    auto source = std::filesystem::path{std::string{argv[1]}};
-    auto destination = std::filesystem::path{std::string{argv[2]}};
-    std::filesystem::remove(destination);
-    copyTool->CopyFile(source, destination);
     return 0;
 }

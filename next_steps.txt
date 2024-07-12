@@ -1,8 +1,0 @@
-testing = different files + time comparison
-comparing files
-
---source --destination --help
-
-warnigns as errors
-
-c++20, 23

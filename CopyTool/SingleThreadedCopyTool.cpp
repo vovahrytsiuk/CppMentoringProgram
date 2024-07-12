@@ -5,6 +5,8 @@
 class SingleThreadedCopyTool : public ICopyTool
 {
 public:
+    SingleThreadedCopyTool(std::size_t bufferSize) : _bufferSize{bufferSize} {}
+
     void CopyFile(const std::filesystem::path &source, const std::filesystem::path &destination) override
     {
         auto sourceFile = std::ifstream(source, std::ios::binary);
@@ -17,19 +19,21 @@ public:
         {
             throw std::runtime_error("File " + source.generic_string() + " cannot be opened for writing");
         }
-        constexpr auto bufferSize = 1024 * 1024; // 1MB
-        auto buffer = std::vector<char>(bufferSize);
+        auto buffer = std::vector<char>(_bufferSize);
         while (!sourceFile.eof())
         {
-            sourceFile.read(buffer.data(), bufferSize);
-            destinationFile.write(buffer.data(), bufferSize);
+            sourceFile.read(buffer.data(), _bufferSize);
+            destinationFile.write(buffer.data(), sourceFile.gcount());
         }
         sourceFile.close();
         destinationFile.close();
     }
+
+private:
+    std::size_t _bufferSize;
 };
 
-ICopyToolPtrU CreateSingleThreadedCopyTool()
+ICopyToolPtrU CreateSingleThreadedCopyTool(std::size_t bufferSize)
 {
-    return std::make_unique<SingleThreadedCopyTool>();
+    return std::make_unique<SingleThreadedCopyTool>(bufferSize);
 }
