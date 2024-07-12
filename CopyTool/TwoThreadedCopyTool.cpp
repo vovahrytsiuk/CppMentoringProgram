@@ -8,6 +8,11 @@
 class TwoThreadedCopyTool : public ICopyTool
 {
 public:
+    TwoThreadedCopyTool(std::size_t bufferSize) : _bufferSize{bufferSize}
+    {
+        _buffer.reserve(_bufferSize);
+    }
+
     void CopyFile(const std::filesystem::path &source, const std::filesystem::path &destination) override
     {
         auto sourceFile = std::ifstream(source, std::ios::binary);
@@ -34,15 +39,17 @@ public:
 private:
     void readData(std::ifstream &sourceFile)
     {
-        auto localBuffer = std::vector<char>(_bufferSize);
+        auto localBuffer = std::vector<char>();
+        localBuffer.reserve(_bufferSize);
         while (!sourceFile.eof())
         {
             sourceFile.read(localBuffer.data(), _bufferSize);
             localBuffer.resize(sourceFile.gcount());
             std::unique_lock<std::mutex> lock(_mutex);
             _conditionalVariable.wait(lock, [this]()
-                                      { return _buffer.empty(); });
+                                      { return !_bufferReady; });
             std::swap(_buffer, localBuffer);
+            _bufferReady = true;
             _conditionalVariable.notify_one();
         }
         std::unique_lock<std::mutex> lock(_mutex);
@@ -57,8 +64,9 @@ private:
         {
             std::unique_lock<std::mutex> lock(_mutex);
             _conditionalVariable.wait(lock, [this]()
-                                      { return !_buffer.empty(); });
+                                      { return _bufferReady; });
             std::swap(localBuffer, _buffer);
+            _bufferReady = false;
             _conditionalVariable.notify_one();
             lock.unlock();
             if (!localBuffer.empty())
@@ -74,13 +82,14 @@ private:
     }
 
     std::vector<char> _buffer;
-    constexpr static std::size_t _bufferSize{1024 * 1024};
+    std::size_t _bufferSize;
+    bool _bufferReady = false;
     bool _readingFinished = false;
     std::condition_variable _conditionalVariable;
     std::mutex _mutex;
 };
 
-ICopyToolPtrU CreateTwoThreadedCopyTool()
+ICopyToolPtrU CreateTwoThreadedCopyTool(std::size_t bufferSize)
 {
-    return std::make_unique<TwoThreadedCopyTool>();
+    return std::make_unique<TwoThreadedCopyTool>(bufferSize);
 }

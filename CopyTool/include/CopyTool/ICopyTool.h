@@ -13,6 +13,6 @@ using ICopyToolPtrU = std::unique_ptr<ICopyTool>;
 
 ICopyToolPtrU CreateStlCopyTool();
 
-ICopyToolPtrU CreateSingleThreadedCopyTool();
+ICopyToolPtrU CreateSingleThreadedCopyTool(std::size_t bufferSize);
 
-ICopyToolPtrU CreateTwoThreadedCopyTool();
+ICopyToolPtrU CreateTwoThreadedCopyTool(std::size_t bufferSize);
