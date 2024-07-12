@@ -7,11 +7,19 @@ int main(int argc, char **argv)
 {
     std::vector<std::string> args(argv + 1, argv + argc);
     auto programOptions = ProgramOptions::ParseProgramOptions(args);
-    if (programOptions)
+    if (!programOptions)
+    {
+        return 0;
+    }
+    try
     {
         auto copyTool = CreateTwoThreadedCopyTool(100 * 1024);
         std::filesystem::remove(programOptions->_destination);
         copyTool->CopyFile(programOptions->_source, programOptions->_destination);
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
     }
     return 0;
 }
