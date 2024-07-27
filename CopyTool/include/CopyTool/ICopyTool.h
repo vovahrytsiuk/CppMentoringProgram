@@ -16,3 +16,5 @@ ICopyToolPtrU CreateStlCopyTool();
 ICopyToolPtrU CreateSingleThreadedCopyTool(std::size_t bufferSize);
 
 ICopyToolPtrU CreateTwoThreadedCopyTool(std::size_t bufferSize);
+
+ICopyToolPtrU CreateSharedMemoryCopyTool(std::string_view sharedMemoryName);

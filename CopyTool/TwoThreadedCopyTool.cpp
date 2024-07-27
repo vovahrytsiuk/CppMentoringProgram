@@ -20,6 +20,7 @@ public:
         {
             throw std::runtime_error("File " + source.generic_string() + " cannot be opened for reading");
         }
+        std::filesystem::remove(destination);
         auto destinationFile = std::ofstream(destination, std::ios::binary);
         if (!destinationFile)
         {

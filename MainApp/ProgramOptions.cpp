@@ -12,12 +12,17 @@ namespace
     constexpr auto HelpOption = "help"sv;
     constexpr auto SourceOption = "source"sv;
     constexpr auto DestinationOption = "destination"sv;
+    constexpr auto SharedMemoryNameOption = "shared_memory"sv;
 }
 
 namespace po = boost::program_options;
 
-ProgramOptions::ProgramOptions(std::filesystem::path source, std::filesystem::path destination)
-    : _source{std::move(source)}, _destination{std::move(destination)}
+ProgramOptions::ProgramOptions(std::filesystem::path source,
+                               std::filesystem::path destination,
+                               std::string sharedMemoryName)
+    : _source{std::move(source)},
+      _destination{std::move(destination)},
+      _sharedMemoryName(std::move(sharedMemoryName))
 {
 }
 
@@ -29,7 +34,8 @@ std::optional<ProgramOptions> ProgramOptions::ParseProgramOptions(std::vector<st
     // clang-format off
     options.add_options()
     (SourceOption.data(), po::value<std::filesystem::path>()->required(), "Source file path")
-    (DestinationOption.data(), po::value<std::filesystem::path>()->required(), "Destination file path");
+    (DestinationOption.data(), po::value<std::filesystem::path>()->required(), "Destination file path")
+    (SharedMemoryNameOption.data(), po::value<std::string>()->required(), "Shared memory name");
     // clang-format on
     auto printHelpMessage = [&]()
     {
@@ -48,7 +54,9 @@ std::optional<ProgramOptions> ProgramOptions::ParseProgramOptions(std::vector<st
         }
         po::store(po::command_line_parser(commandLine).options(options).run(), vm);
         po::notify(vm);
-        return ProgramOptions(vm[SourceOption.data()].as<std::filesystem::path>(), vm[DestinationOption.data()].as<std::filesystem::path>());
+        return ProgramOptions(vm[SourceOption.data()].as<std::filesystem::path>(),
+                              vm[DestinationOption.data()].as<std::filesystem::path>(),
+                              vm[SharedMemoryNameOption.data()].as<std::string>());
     }
     catch (std::exception &e)
     {

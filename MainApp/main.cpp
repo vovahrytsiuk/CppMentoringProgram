@@ -13,8 +13,7 @@ int main(int argc, char **argv)
     }
     try
     {
-        auto copyTool = CreateTwoThreadedCopyTool(100 * 1024);
-        std::filesystem::remove(programOptions->_destination);
+        auto copyTool = CreateSharedMemoryCopyTool("sharedMemory");
         copyTool->CopyFile(programOptions->_source, programOptions->_destination);
     }
     catch (const std::exception &e)
