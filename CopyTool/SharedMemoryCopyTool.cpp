@@ -181,3 +181,11 @@ ICopyToolPtrU CreateSharedMemoryCopyTool(std::string_view sharedMemoryName)
 // process 2 f1, f2, sm1
 // process 3 f3, f4, sm1 = wait until first copying done
 // process 4 f3, f4, sm1
+
+// implementation rreqorked to work in parallel - two buffers in shared memory used for storing data from input files
+// reqorked meshanism of communication with shared memory - now shared memory will be removed in destructor
+// meshanism of stroign call history and monitoring state - in progress
+// it is about monitoring calls with same shared memory name when second pair of processes shouild wait until first will finish
+// and about monitoring of input and output file names - if one of that files matches currently files this pair of processes shouild wait unitl previous finishes
+// and about calceling pair of processes if such pair of input and output files are the same  - processes should finish
+// questions
