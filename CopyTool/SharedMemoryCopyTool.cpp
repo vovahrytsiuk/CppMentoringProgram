@@ -4,7 +4,6 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
-#include <boost/interprocess/sync/named_semaphore.hpp>
 
 #include <array>
 #include <chrono>
@@ -12,19 +11,6 @@
 #include <iostream>
 
 using namespace boost::interprocess;
-using namespace std::literals;
-
-class ReadOperation
-{
-public:
-private:
-};
-
-class WriteOperation
-{
-public:
-private:
-};
 
 class SharedMemoryCopyTool : public ICopyTool
 {
@@ -38,6 +24,21 @@ public:
     SharedMemoryCopyTool(std::string_view sharedMemoryName, CopyToolMode mode)
         : _sharedMemoryName{sharedMemoryName}, _mode{mode}
     {
+        std::cout << "Copy toll mode: "
+                  << (_mode == CopyToolMode::Reader ? "Reader" : "Writer")
+                  << std::endl;
+
+        if (_mode == CopyToolMode::Reader)
+        {
+            _shm_obj = shared_memory_object(create_only, _sharedMemoryName.data(), read_write);
+            _shm_obj.truncate(sizeof(SharedData));
+        }
+        else
+        {
+            _shm_obj = shared_memory_object(open_only, _sharedMemoryName.data(), read_write);
+        }
+        _region = mapped_region(_shm_obj, read_write);
+        _sharedData = static_cast<SharedData *>(_region.get_address());
     }
 
     void CopyFile(const std::filesystem::path &source, const std::filesystem::path &destination)
@@ -52,26 +53,34 @@ public:
         }
     }
 
+    ~SharedMemoryCopyTool()
+    {
+        if (_mode == CopyToolMode::Writer)
+        {
+            shared_memory_object::remove(_sharedMemoryName.data());
+        }
+    }
+
 private:
     struct SharedData
     {
         std::chrono::steady_clock::time_point _readerStart;
-        interprocess_mutex _mutex;
-        interprocess_condition _cond;
-        bool _dataReady;
-        std::size_t _actualBufferSize;
-        std::array<char, 1024 * 1024> _buffer; // add additional buffer
+        interprocess_mutex _mutex1;
+        interprocess_mutex _mutex2;
+        interprocess_condition _cond1;
+        interprocess_condition _cond2;
+        bool _firstBufferReady = false;
+        bool _secondBufferReady = false;
+        std::size_t _actualFirstBufferSize;
+        std::size_t _actualSecondBufferSize;
+        std::array<char, 1024> _firstBuffer;
+        std::array<char, 1024> _secondBuffer;
+        bool _readingFinished = false;
     };
 
     void Write(const std::filesystem::path &path)
     {
         auto writerStart = std::chrono::steady_clock::now();
-
-        shared_memory_object shm_obj(open_only, _sharedMemoryName.data(), read_write);
-        mapped_region region(shm_obj, read_write);
-        void *address = region.get_address();
-        SharedData *sharedData = static_cast<SharedData *>(address);
-
         std::filesystem::remove(path);
         std::ofstream file(path, std::ios::out | std::ios::binary);
         if (!file.is_open())
@@ -79,37 +88,71 @@ private:
             std::cout << "Error: Couldn't open file " << path << " for writing." << std::endl;
             return;
         }
+
         while (true)
         {
-            scoped_lock<interprocess_mutex> lock(sharedData->_mutex);
-            sharedData->_cond.wait(lock, [&]()
-                                   { return sharedData->_dataReady; });
-            if (sharedData->_actualBufferSize == 0)
             {
-                break;
+                boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock1(_sharedData->_mutex1);
+                while (!_sharedData->_firstBufferReady && !_sharedData->_readingFinished)
+                {
+                    _sharedData->_cond1.wait(lock1);
+                }
+                if (_sharedData->_readingFinished && !_sharedData->_firstBufferReady)
+                {
+                    break;
+                }
+
+                std::cout << "Writing from first buffer: " << _sharedData->_actualFirstBufferSize << std::endl;
+
+                file.write(_sharedData->_firstBuffer.data(), _sharedData->_actualFirstBufferSize);
+                _sharedData->_firstBufferReady = false;
+
+                _sharedData->_cond1.notify_one();
+                std::cout << "Writing from first buffer finished" << std::endl;
             }
-            file.write(sharedData->_buffer.data(), sharedData->_actualBufferSize);
-            sharedData->_dataReady = false;
-            sharedData->_cond.notify_one();
+
+            {
+                boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock2(_sharedData->_mutex2);
+                while (!_sharedData->_secondBufferReady && !_sharedData->_readingFinished)
+                {
+                    _sharedData->_cond2.wait(lock2);
+                }
+                if (_sharedData->_readingFinished && !_sharedData->_secondBufferReady)
+                {
+                    break;
+                }
+
+                std::cout << "Writing from second buffer: " << _sharedData->_actualSecondBufferSize << std::endl;
+
+                file.write(_sharedData->_secondBuffer.data(), _sharedData->_actualSecondBufferSize);
+                _sharedData->_secondBufferReady = false;
+
+                _sharedData->_cond2.notify_one();
+                std::cout << "Writing from second buffer finished" << std::endl;
+            }
         }
 
         auto writerFinish = std::chrono::steady_clock::now();
+        std::cout << "Expecting writer time: "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(
+                         writerStart - _sharedData->_readerStart)
+                         .count()
+                  << " milliseconds." << std::endl;
         std::cout << "Writer work time: "
-                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(
                          writerFinish - writerStart)
                          .count()
-                  << " microseconds." << std::endl;
+                  << " milliseconds." << std::endl;
         std::cout << "General work time: "
-                  << std::chrono::duration_cast<std::chrono::microseconds>(
-                         writerFinish - sharedData->_readerStart)
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(
+                         writerFinish - _sharedData->_readerStart)
                          .count()
-                  << " microseconds." << std::endl;
-        shared_memory_object::remove(_sharedMemoryName.data()); // use remove in destructor or in final block
+                  << " milliseconds." << std::endl;
     }
 
     void Read(const std::filesystem::path &path)
     {
-        auto readerStart = std::chrono::steady_clock::now();
+        _sharedData->_readerStart = std::chrono::steady_clock::now();
         std::ifstream file(path, std::ios::binary | std::ios::in);
         if (!file.is_open())
         {
@@ -117,44 +160,61 @@ private:
             return;
         }
 
-        shared_memory_object shm_obj(create_only, _sharedMemoryName.data(), read_write);
-        shm_obj.truncate(sizeof(SharedData));
-        mapped_region region(shm_obj, read_write);
-
-        void *address = region.get_address();
-
-        SharedData *sharedData = new (address) SharedData;
-        sharedData->_dataReady = false;
-        sharedData->_readerStart = readerStart;
-
         while (file)
         {
-            file.read(sharedData->_buffer.data(), sharedData->_buffer.size());
-            sharedData->_actualBufferSize = file.gcount();
-            if (sharedData->_actualBufferSize > 0)
+            // Handle the first buffer
+            if (!_sharedData->_firstBufferReady)
             {
-                scoped_lock<interprocess_mutex> lock(sharedData->_mutex);
-                sharedData->_dataReady = true;
-                sharedData->_cond.notify_one();
-                sharedData->_cond.wait(lock, [&]()
-                                       { return !sharedData->_dataReady; });
+                boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock1(_sharedData->_mutex1);
+                if (!_sharedData->_firstBufferReady)
+                { // Double-check locking
+                    std::cout << "Reading to first buffer" << std::endl;
+                    file.read(_sharedData->_firstBuffer.data(), _sharedData->_firstBuffer.size());
+                    _sharedData->_actualFirstBufferSize = file.gcount();
+                    _sharedData->_firstBufferReady = true;
+                    _sharedData->_cond1.notify_one();
+                    std::cout << "Reading to first buffer finished: " << _sharedData->_actualFirstBufferSize << std::endl;
+                }
+            }
+
+            // Handle the second buffer
+            if (!_sharedData->_secondBufferReady && !file.eof())
+            {
+                boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock2(_sharedData->_mutex2);
+                if (!_sharedData->_secondBufferReady)
+                { // Double-check locking
+                    std::cout << "Reading to second buffer" << std::endl;
+                    file.read(_sharedData->_secondBuffer.data(), _sharedData->_secondBuffer.size());
+                    _sharedData->_actualSecondBufferSize = file.gcount();
+                    _sharedData->_secondBufferReady = true;
+                    _sharedData->_cond2.notify_one();
+                    std::cout << "Reading to second buffer finished: " << _sharedData->_actualSecondBufferSize << std::endl;
+                }
             }
         }
 
-        scoped_lock<interprocess_mutex> lock(sharedData->_mutex);
-        sharedData->_dataReady = true;
-        sharedData->_actualBufferSize = 0;
-        sharedData->_cond.notify_one();
+        file.close();
+        {
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock1(_sharedData->_mutex1);
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock2(_sharedData->_mutex2);
+            _sharedData->_readingFinished = true;
+            _sharedData->_cond1.notify_one();
+            _sharedData->_cond2.notify_one();
+        }
+
         std::cout << "Reader work time: "
-                  << std::chrono::duration_cast<std::chrono::microseconds>(
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::steady_clock::now() -
-                         readerStart)
+                         _sharedData->_readerStart)
                          .count()
-                  << " microseconds." << std::endl;
+                  << " milliseconds." << std::endl;
     }
 
     std::string_view _sharedMemoryName;
     CopyToolMode _mode;
+    shared_memory_object _shm_obj;
+    mapped_region _region;
+    SharedData *_sharedData;
 };
 
 ICopyToolPtrU CreateSharedMemoryCopyTool(std::string_view sharedMemoryName)
@@ -176,16 +236,3 @@ ICopyToolPtrU CreateSharedMemoryCopyTool(std::string_view sharedMemoryName)
     std::cout << "Mode: " << (mode == SharedMemoryCopyTool::CopyToolMode::Reader ? "reader" : "writer") << std::endl;
     return std::make_unique<SharedMemoryCopyTool>(sharedMemoryName, mode);
 }
-
-// process 1 f1, f2, sm1
-// process 2 f1, f2, sm1
-// process 3 f3, f4, sm1 = wait until first copying done
-// process 4 f3, f4, sm1
-
-// implementation rreqorked to work in parallel - two buffers in shared memory used for storing data from input files
-// reqorked meshanism of communication with shared memory - now shared memory will be removed in destructor
-// meshanism of stroign call history and monitoring state - in progress
-// it is about monitoring calls with same shared memory name when second pair of processes shouild wait until first will finish
-// and about monitoring of input and output file names - if one of that files matches currently files this pair of processes shouild wait unitl previous finishes
-// and about calceling pair of processes if such pair of input and output files are the same  - processes should finish
-// questions

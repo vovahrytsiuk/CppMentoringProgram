@@ -13,7 +13,7 @@ int main(int argc, char **argv)
     }
     try
     {
-        auto copyTool = CreateSharedMemoryCopyTool("sharedMemory");
+        auto copyTool = CreateSharedMemoryCopyTool(programOptions->_sharedMemoryName);
         copyTool->CopyFile(programOptions->_source, programOptions->_destination);
     }
     catch (const std::exception &e)
