@@ -18,6 +18,11 @@ TEST(CopyToolTestSuite, TwoThreadedCopyToolCreatorTest)
     EXPECT_NO_THROW(CreateTwoThreadedCopyTool(100));
 }
 
+TEST(CopyToolTestSuite, SharedMemoryCopyTool)
+{
+    EXPECT_NO_THROW(CreateSharedMemoryCopyTool("sm1"));
+}
+
 namespace
 {
     bool CompareFiles(const std::filesystem::path &lhs, const std::filesystem::path &rhs)

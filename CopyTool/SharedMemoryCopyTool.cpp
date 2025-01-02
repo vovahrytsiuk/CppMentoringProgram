@@ -245,6 +245,5 @@ ICopyToolPtrU CreateSharedMemoryCopyTool(std::string_view sharedMemoryName)
     }();
     auto mode = sharedMemoryExists ? SharedMemoryCopyTool::CopyToolMode::Writer
                                    : SharedMemoryCopyTool::CopyToolMode::Reader;
-    std::cout << "Mode: " << (mode == SharedMemoryCopyTool::CopyToolMode::Reader ? "reader" : "writer") << std::endl;
     return std::make_unique<SharedMemoryCopyTool>(sharedMemoryName, mode);
 }
