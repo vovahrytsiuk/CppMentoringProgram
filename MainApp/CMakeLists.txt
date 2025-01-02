@@ -31,3 +31,4 @@ enable_testing()
 
 add_subdirectory(test)
 
+install(TARGETS copyTool DESTINATION bin)

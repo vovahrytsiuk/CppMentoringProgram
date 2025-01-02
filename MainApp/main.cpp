@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv)
 {
-    std::vector<std::string> args(argv + 1, argv + argc);
+    std::vector<std::string> args(argv, argv + argc);
     auto programOptions = ProgramOptions::ParseProgramOptions(args);
     if (!programOptions)
     {
@@ -19,6 +19,7 @@ int main(int argc, char **argv)
     catch (const std::exception &e)
     {
         std::cout << e.what() << std::endl;
+        return -1;
     }
     return 0;
 }
