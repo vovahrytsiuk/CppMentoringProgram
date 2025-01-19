@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv)
 {
-    std::vector<std::string> args(argv + 1, argv + argc);
+    std::vector<std::string> args(argv, argv + argc);
     auto programOptions = ProgramOptions::ParseProgramOptions(args);
     if (!programOptions)
     {
@@ -13,13 +13,13 @@ int main(int argc, char **argv)
     }
     try
     {
-        auto copyTool = CreateTwoThreadedCopyTool(100 * 1024);
-        std::filesystem::remove(programOptions->_destination);
+        auto copyTool = CreateSharedMemoryCopyTool(programOptions->_sharedMemoryName);
         copyTool->CopyFile(programOptions->_source, programOptions->_destination);
     }
     catch (const std::exception &e)
     {
         std::cout << e.what() << std::endl;
+        return -1;
     }
     return 0;
 }

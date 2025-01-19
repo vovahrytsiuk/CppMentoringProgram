@@ -2,7 +2,6 @@ project(copyToolExe VERSION 0.1.0 LANGUAGES C CXX)
 
 find_package(Boost REQUIRED COMPONENTS program_options)
 
-
 set(SOURCES
     ProgramOptions.cpp
     include/MainApp/ProgramOptions.h
@@ -32,3 +31,4 @@ enable_testing()
 
 add_subdirectory(test)
 
+install(TARGETS copyTool DESTINATION bin)
