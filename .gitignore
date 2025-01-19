@@ -3,3 +3,5 @@ build/
 CMakeUserPresets.json
 *.xlsx
 multithreading/
+bin/
+res*

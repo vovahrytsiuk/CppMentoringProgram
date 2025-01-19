@@ -1,6 +1,7 @@
 #include "include/CopyTool/ICopyTool.h"
 #include <fstream>
 #include <vector>
+#include <iostream>
 
 class SingleThreadedCopyTool : public ICopyTool
 {
@@ -28,6 +29,12 @@ public:
         }
         sourceFile.close();
         destinationFile.close();
+    }
+
+    void Terminate() override
+    {
+        std::cout << "Custom termination function called" << std::endl;
+        std::exit(-1);
     }
 
 private:
