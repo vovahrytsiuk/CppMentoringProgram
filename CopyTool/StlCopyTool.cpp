@@ -1,5 +1,4 @@
 #include "include/CopyTool/ICopyTool.h"
-#include <iostream>
 
 class StlCopyTool : public ICopyTool
 {
@@ -8,12 +7,6 @@ public:
     {
         std::filesystem::remove(destination);
         std::filesystem::copy_file(source, destination);
-    }
-
-    void Terminate() override
-    {
-        std::cout << "Custom termination function called" << std::endl;
-        std::exit(-1);
     }
 };
 

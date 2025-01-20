@@ -4,7 +4,6 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <iostream>
 
 class TwoThreadedCopyTool : public ICopyTool
 {
@@ -12,12 +11,6 @@ public:
     TwoThreadedCopyTool(std::size_t bufferSize) : _bufferSize{bufferSize}
     {
         _buffer.reserve(_bufferSize);
-    }
-
-    void Terminate() override
-    {
-        std::cout << "Custom termination function called" << std::endl;
-        std::exit(-1);
     }
 
     void CopyFile(const std::filesystem::path &source, const std::filesystem::path &destination) override

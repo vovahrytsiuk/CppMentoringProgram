@@ -164,26 +164,6 @@ public:
         std::cout << "Shared memory copy tool destroed" << std::endl;
     }
 
-    void Terminate() override
-    {
-        std::cout << "Custom termination function called" << std::endl;
-        if (_sharedMemory)
-        {
-            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock1(_sharedMemory->getData()._mutex1);
-            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock2(_sharedMemory->getData()._mutex2);
-            _sharedMemory->getData()._readingFinished = true;
-            _sharedMemory->getData()._firstBufferReady = false;
-            _sharedMemory->getData()._secondBufferReady = false;
-            _sharedMemory->getData()._cond.notify_one();
-            _sharedMemory.reset();
-        }
-        if (_file)
-        {
-            _file.reset();
-        }
-        std::exit(-1);
-    }
-
 private:
     enum CopyToolMode
     {
