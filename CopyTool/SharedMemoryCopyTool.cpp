@@ -161,6 +161,13 @@ public:
 
     ~SharedMemoryCopyTool()
     {
+        if (_mode == CopyToolMode::Reader)
+        {
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock1(_sharedMemory->getData()._mutex1);
+            boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock2(_sharedMemory->getData()._mutex2);
+            _sharedMemory->getData()._readingFinished = true;
+            _sharedMemory->getData()._cond.notify_one();
+        }
         std::cout << "Shared memory copy tool destroed" << std::endl;
     }
 
