@@ -83,9 +83,10 @@ Consider whether to store all class state in a data member that is wrapped in a 
 
 1. Implement own terminate function to close at any circumstances shared memory handle as well as opened for reading/writing file - Done
      
-1. Add throw any exception code after complete of first memory block reading/writing (take care about "to close" another process) - In progress
+1. Add throw any exception code after complete of first memory block reading/writing (take care about "to close" another process) - Done
 
 1. Inject some classes in logic for logging purposes (constructor + destructor) - Done
+
 
 
 
