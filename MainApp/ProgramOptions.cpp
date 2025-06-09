@@ -10,19 +10,15 @@ using namespace std::literals;
 namespace
 {
     constexpr auto HelpOption = "help"sv;
-    constexpr auto SourceOption = "source"sv;
-    constexpr auto DestinationOption = "destination"sv;
-    constexpr auto SharedMemoryNameOption = "shared_memory"sv;
+    constexpr auto ServerOption = "server"sv;
+    constexpr auto ClientOption = "client"sv;
 }
 
 namespace po = boost::program_options;
 
-ProgramOptions::ProgramOptions(std::filesystem::path source,
-                               std::filesystem::path destination,
-                               std::string sharedMemoryName)
-    : _source{std::move(source)},
-      _destination{std::move(destination)},
-      _sharedMemoryName(std::move(sharedMemoryName))
+ProgramOptions::ProgramOptions(
+    ProgramOptions::Mode mode)
+    : _mode{mode}
 {
 }
 
@@ -33,13 +29,12 @@ std::optional<ProgramOptions> ProgramOptions::ParseProgramOptions(std::vector<st
     po::options_description options("Copy tool options");
     // clang-format off
     options.add_options()
-    (SourceOption.data(), po::value<std::filesystem::path>()->required(), "Source file path")
-    (DestinationOption.data(), po::value<std::filesystem::path>()->required(), "Destination file path")
-    (SharedMemoryNameOption.data(), po::value<std::string>()->required(), "Shared memory name");
+    (ServerOption.data(), "Server mode of application to act as a server")
+    (ClientOption.data(), "Client mode of application to actas a client");
     // clang-format on
     auto printHelpMessage = [&]()
     {
-        std::cout << "Usage: copyTool --source \"source path\" --destination \"destination path\"\n";
+        std::cout << "Usage: copyTool --client/--server\n";
         std::cout << commonOptions << options;
     };
     try
@@ -54,9 +49,22 @@ std::optional<ProgramOptions> ProgramOptions::ParseProgramOptions(std::vector<st
         }
         po::store(po::command_line_parser(commandLine).options(options).run(), vm);
         po::notify(vm);
-        return ProgramOptions(vm[SourceOption.data()].as<std::filesystem::path>(),
-                              vm[DestinationOption.data()].as<std::filesystem::path>(),
-                              vm[SharedMemoryNameOption.data()].as<std::string>());
+        bool isServer = vm.contains(ServerOption.data());
+        bool isClient = vm.contains(ClientOption.data());
+        if (isServer && isClient)
+        {
+            std::cout << "ERROR: Only one of --server/--client should be provided";
+            return std::nullopt;
+        }
+        else if (isServer || isClient)
+        {
+            return ProgramOptions(isServer ? ProgramOptions::Mode::Server : ProgramOptions::Mode::Client);
+        }
+        else
+        {
+            std::cout << "ERROR: One of --server/--client should be provided";
+            return std::nullopt;
+        }
     }
     catch (std::exception &e)
     {

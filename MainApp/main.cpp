@@ -18,7 +18,15 @@ int main(int argc, char **argv)
     {
         return 0;
     }
-    copyTool = CreateSharedMemoryCopyTool(programOptions->_sharedMemoryName);
-    copyTool->CopyFile(programOptions->_source, programOptions->_destination);
+    if (programOptions->_mode == ProgramOptions::Mode::Server)
+    {
+        std::cout << "Application is launched as a server" << std::endl;
+    }
+    else
+    {
+        std::cout << "Application is launched as a client" << std::endl;
+    }
+    // copyTool = CreateSharedMemoryCopyTool(programOptions->_sharedMemoryName);
+    // copyTool->CopyFile(programOptions->_source, programOptions->_destination);
     return 0;
 }
