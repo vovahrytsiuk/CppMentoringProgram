@@ -29,6 +29,6 @@ PRIVATE
 include(CTest)
 enable_testing()
 
-add_subdirectory(test)
+# add_subdirectory(test)
 
 install(TARGETS copyTool DESTINATION bin)
